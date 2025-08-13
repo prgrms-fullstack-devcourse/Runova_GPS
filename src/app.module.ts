@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from "@nestjs/config";
-import { PgModule } from "./config/pg";
-import { PathsModule } from './paths/paths.module';
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { CoursesModule } from './courses/courses.module';
+import { RedisModule } from "./config/redis";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { typeormDataSourceFactory, typeormOptionsFactory } from "./config/typeorm";
 
 @Module({
   imports: [
@@ -9,8 +11,13 @@ import { PathsModule } from './paths/paths.module';
       isGlobal: true,
       envFilePath: ["../.env"],
     }),
-    PgModule,
-    PathsModule,
+    TypeOrmModule.forRootAsync({
+      useFactory: typeormOptionsFactory,
+      dataSourceFactory: typeormDataSourceFactory,
+      inject: [ConfigService],
+    }),
+    RedisModule,
+    CoursesModule,
   ],
   providers: [],
   controllers: [],
