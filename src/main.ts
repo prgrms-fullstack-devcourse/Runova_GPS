@@ -5,7 +5,7 @@ import { LoggingInterceptor } from "./common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { initializeTransactionalContext } from "typeorm-transactional";
 import { NestExpressApplication } from "@nestjs/platform-express";
-import { HttpStatus, ValidationPipe } from "@nestjs/common";
+import { ValidationPipe } from "@nestjs/common";
 
 async function bootstrap() {
   initializeTransactionalContext();

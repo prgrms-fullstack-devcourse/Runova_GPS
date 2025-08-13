@@ -19,10 +19,14 @@ export class Course extends ModelBase {
     @Column({ name: "user_id", type: "integer" })
     userId: number;
 
+    @Column({ type: "double" })
+    length: number;
+
     @Column({
         type: "geometry",
         spatialFeatureType: "LineString",
         srid: 4326,
+        precision: 12,
         transformer: __transformer,
     })
     path: [number, number][];
