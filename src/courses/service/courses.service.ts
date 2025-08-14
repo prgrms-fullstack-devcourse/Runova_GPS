@@ -5,6 +5,8 @@ import { In, Repository } from "typeorm";
 import { CourseDTO, GetCoursesDTO } from "../dto";
 import { pick } from "../../utils/object";
 import { ConfigService } from "@nestjs/config";
+import { EstimateTimeService } from "./estimate.time.service";
+import { Coordinates } from "../../common/geo";
 
 @Injectable()
 export class CoursesService {
@@ -13,25 +15,18 @@ export class CoursesService {
     constructor(
         @InjectRepository(Course)
         private readonly _coursesRepo: Repository<Course>,
+        @Inject(EstimateTimeService)
+        private readonly _estimateTimeService: EstimateTimeService,
         @Inject(ConfigService)
         config: ConfigService,
     ) {
 
     }
 
-    async createCourse(userId: number, path: [number, number][]): Promise<void> {
-        await this._coursesRepo.save({ userId, path });
-    }
-
-    async getCourse(id: number): Promise<CourseDTO> {
-
-        const course = await this._coursesRepo.findOne({
-            where: { id },
-            cache: true,
-        });
-
-        if (!course) throw new NotFoundException();
-        return pick(course, ["id", "length", "path"]);
+    async createCourse(userId: number, path: Coordinates[]): Promise<CourseDTO> {
+        return await this._coursesRepo.save({ userId, path })
+            .then((c: Course) => this.toCourseDTO(c))
+            .catch(err => { throw err; });
     }
 
     async getCourses(dto: GetCoursesDTO): Promise<CourseDTO[]> {
@@ -42,26 +37,16 @@ export class CoursesService {
             userId,
         });
 
-        return courses.map(c => pick(c, ["id", "length", "path"]));
+        return courses.map(c => this.toCourseDTO(c));
     }
 
-    async isContained(id: number, pos: [number, number]): Promise<boolean> {
+    private toCourseDTO(course: Course): CourseDTO {
+        const estimatedTime = this._estimateTimeService.estimateTime(course.id);
 
-        const result = await this._coursesRepo
-            .createQueryBuilder("course")
-            .select(
-                `ST_Contain(
-                course.path,
-                ST_setSRID(ST_MakePoint(:lon, :lat), 4326)
-                )`,
-                "contained"
-            )
-            .where("contained.id = :id")
-            .setParameters({ id, lon: pos[0], lat: pos[1] })
-            .getRawOne<{ contained: boolean; }>();
-
-        if (!result) throw new NotFoundException();
-        return result.contained;
+        return {
+            estimatedTime,
+            ...pick(course, ["id", "length", "path"]),
+        };
     }
 
 }
