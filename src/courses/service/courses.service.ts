@@ -1,17 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Course } from "../model";
 import { In, Repository } from "typeorm";
 import { CourseDTO, GetCoursesDTO } from "../dto";
 import { pick } from "../../utils/object";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class CoursesService {
+    private readonly _tolerance: number;
 
     constructor(
         @InjectRepository(Course)
         private readonly _coursesRepo: Repository<Course>,
-    ) {}
+        @Inject(ConfigService)
+        config: ConfigService,
+    ) {
+
+    }
 
     async createCourse(userId: number, path: [number, number][]): Promise<void> {
         await this._coursesRepo.save({ userId, path });
