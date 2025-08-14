@@ -19,7 +19,7 @@ export class Course extends ModelBase {
     @Column({ name: "user_id", type: "integer" })
     userId: number;
 
-    @Column({ type: "double" })
+    @Column({ type: "double precision"  })
     length: number;
 
     @Column({
