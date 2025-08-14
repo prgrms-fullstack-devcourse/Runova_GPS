@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { CoursesModule } from './courses/courses.module';
+import { RunningModule } from './running/running.module';
 import { RedisModule } from "./config/redis";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { typeormDataSourceFactory, typeormOptionsFactory } from "./config/typeorm";
@@ -17,7 +17,7 @@ import { typeormDataSourceFactory, typeormOptionsFactory } from "./config/typeor
       inject: [ConfigService],
     }),
     RedisModule,
-    CoursesModule,
+    RunningModule,
   ],
   providers: [],
   controllers: [],

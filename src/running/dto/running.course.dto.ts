@@ -3,9 +3,12 @@ import { Coordinates } from "../../common/geo";
 import { Type } from "class-transformer";
 
 @ApiExtraModels(Coordinates)
-export class CourseDTO {
+export class RunningCourseDTO {
     @ApiProperty({ type: "integer" })
     id: number;
+
+    @ApiProperty({ type: "string" })
+    takenTimeExpectation: string;
 
     @ApiProperty({ type: "number" })
     length: number;
