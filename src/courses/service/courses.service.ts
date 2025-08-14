@@ -2,26 +2,22 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Course } from "../model";
 import { In, Repository } from "typeorm";
-import { CourseDTO, GetCoursesDTO } from "../dto";
+import { CourseDTO, CourseSegmentsDTO, GetCoursesDTO } from "../dto";
 import { pick } from "../../utils/object";
-import { ConfigService } from "@nestjs/config";
 import { EstimateTimeService } from "./estimate.time.service";
 import { Coordinates } from "../../common/geo";
+import { plainToInstance } from "class-transformer";
+import { SelectSegments } from "./service.internal";
 
 @Injectable()
 export class CoursesService {
-    private readonly _tolerance: number;
 
     constructor(
         @InjectRepository(Course)
         private readonly _coursesRepo: Repository<Course>,
         @Inject(EstimateTimeService)
         private readonly _estimateTimeService: EstimateTimeService,
-        @Inject(ConfigService)
-        config: ConfigService,
-    ) {
-
-    }
+    ) {}
 
     async createCourse(userId: number, path: Coordinates[]): Promise<CourseDTO> {
         return await this._coursesRepo.save({ userId, path })
@@ -38,6 +34,22 @@ export class CoursesService {
         });
 
         return courses.map(c => this.toCourseDTO(c));
+    }
+
+    async getCourseSegments(id: number): Promise<CourseSegmentsDTO> {
+
+        const raw = await this._coursesRepo
+            .createQueryBuilder("course")
+            .select(SelectSegments("course", "path"))
+            .where("course.id = :id", { id })
+            .getRawOne();
+
+        if (!raw) throw new NotFoundException();
+        return plainToInstance(CourseSegmentsDTO, raw);
+    }
+
+    async deleteCourse(id: number, userId: number): Promise<void> {
+        await this._coursesRepo.delete({ id, userId, });
     }
 
     private toCourseDTO(course: Course): CourseDTO {
