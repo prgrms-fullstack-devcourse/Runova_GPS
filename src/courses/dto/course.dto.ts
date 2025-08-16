@@ -1,12 +1,19 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiExtraModels, ApiProperty } from "@nestjs/swagger";
+import { Coordinates } from "../../common/geo";
+import { Type } from "class-transformer";
 
+@ApiExtraModels(Coordinates)
 export class CourseDTO {
     @ApiProperty({ type: "integer" })
     id: number;
 
-    @ApiProperty({ type: "number" })
+    @ApiProperty({ type: "number", description: "총 거리(km)" })
     length: number;
 
-    @ApiProperty({ type: "array", items: { type: "[number, number]" } })
-    path: [number, number][];
+    @ApiProperty({ type: "string", pattern: "hh:mm:ss", description: "예상 소요 시간" })
+    estimatedTime: string;
+    
+    @Type(() => Coordinates)
+    @ApiProperty({ type: Coordinates })
+    path: Coordinates[];
 }
