@@ -3,7 +3,7 @@ import { Repository, SelectQueryBuilder } from "typeorm";
 import { GetSegmentsQueryResult } from "./get.segments.query.result";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Course } from "../model";
-import { SelectDumpPoints } from "../../common/geo";
+import { makeSelectDumpPoints } from "../../common/geo";
 import { plainToInstanceOrReject } from "../../utils";
 
 @Injectable()
@@ -16,21 +16,24 @@ export class GetSegmentsQueryHandler {
 
     async execute(id: number): Promise<GetSegmentsQueryResult | null> {
 
-        const raw = await this._coursesRepo
+        const qb = this._coursesRepo
             .createQueryBuilder("course")
+            .select("dp.pos", "pos")
+            .addSelect("ds.len", "len")
+            .addSelect("ds.deg", "deg");
+
+        const raw = await qb
             .innerJoin(
-                SelectDumpPoints("course.path", "pos"),
+                makeSelectDumpPoints("course.path", "pos"),
                 "dp"
             )
             .innerJoin(
-                __selectDumpSegments,
+                __makeSelectDumpSegmentsQuery(qb),
                 "ds"
             )
-            .select("dp.pos", "pos")
-            .addSelect("ds.len", "len")
-            .addSelect("ds.deg", "deg")
-            .where("course.id = :id", { id })
+            .where("course.id > :id", { id })
             .getRawOne();
+
 
         return raw
             ? await plainToInstanceOrReject(GetSegmentsQueryResult, raw)
@@ -38,39 +41,44 @@ export class GetSegmentsQueryHandler {
     }
 }
 
-function __selectDumpSegments(
-    qb: SelectQueryBuilder<any>
-): SelectQueryBuilder<any> {
-    return qb
+function __makeSelectDumpSegmentsQuery(
+    qb: SelectQueryBuilder<Course>
+): string {
+
+    const sql = qb.subQuery()
         .select(
-            `array_prepend(
-                0::double precision,
-                array_agg(ds.len)
-                )`,
+            `
+             array_prepend(
+                        0::double precision,
+                        array_agg(ds.len)
+             )
+            `,
             "len"
         )
         .addSelect(
-            `array_append(
-                array_agg(ds.deg),
-                0::double precision
-                )`,
+            `
+            array_append(
+                        array_agg(ds.deg),
+                        0::double precision
+            )
+            `,
             "deg"
         )
-        .from(__fromClause, "ds");
+        .from(__fromClause, "ds")
+        .getQuery();
+
+    return `LATERAL(${sql})`;
 }
 
-function __fromClause(qb: SelectQueryBuilder<any>): SelectQueryBuilder<any> {
+
+function __fromClause(qb: SelectQueryBuilder<Course>): SelectQueryBuilder<Course> {
     return qb
         .select(
-            `SUM(ST_Length(ST_Transform(ds.geom, 32652))) OVER (ORDER BY ds.path[1])`,
+            `SUM(ST_Length(ST_Transform(geom, 32652))) OVER (ORDER BY path[1])`,
             "len"
         )
         .addSelect(
-            `ST_Azimuth(ST_StartPoint(ds.geom), ST_EndPoint(ds.geom))`,
+            `ST_Azimuth(ST_StartPoint(geom), ST_EndPoint(geom))`,
             "deg"
-        )
-        .from(
-            `ST_DumpSegments(course.path)`,
-            "ds"
         );
 }
