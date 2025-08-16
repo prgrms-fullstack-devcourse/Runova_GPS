@@ -1,13 +1,11 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from "@nestjs/typeorm";
 import { Course } from "../model";
 import { In, Repository } from "typeorm";
-import { CourseDTO, CourseSegmentsDTO, GetCoursesDTO } from "../dto";
+import { CourseDTO, GetCoursesDTO } from "../dto";
 import { pick } from "../../utils/object";
 import { EstimateTimeService } from "./estimate.time.service";
 import { Coordinates } from "../../common/geo";
-import { plainToInstance } from "class-transformer";
-import { SelectSegments } from "./service.internal";
 
 @Injectable()
 export class CoursesService {
@@ -34,18 +32,6 @@ export class CoursesService {
         });
 
         return courses.map(c => this.toCourseDTO(c));
-    }
-
-    async getCourseSegments(id: number): Promise<CourseSegmentsDTO> {
-
-        const raw = await this._coursesRepo
-            .createQueryBuilder("course")
-            .select(SelectSegments("course", "path"))
-            .where("course.id = :id", { id })
-            .getRawOne();
-
-        if (!raw) throw new NotFoundException();
-        return plainToInstance(CourseSegmentsDTO, raw);
     }
 
     async deleteCourse(id: number, userId: number): Promise<void> {
