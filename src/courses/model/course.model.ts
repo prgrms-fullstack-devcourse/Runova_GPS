@@ -2,7 +2,6 @@ import { ModelBase } from "../../common/model";
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { Coordinates, GeometricColumn } from "../../common/geo";
 
-
 @Entity("courses")
 export class Course extends ModelBase {
     @PrimaryGeneratedColumn()
