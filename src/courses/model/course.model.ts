@@ -11,8 +11,11 @@ export class Course extends ModelBase {
     @Column({ name: "user_id", type: "integer" })
     userId: number;
 
-    @Column({ type: "double precision"  })
+    @Column({ type: "float8"  })
     length: number;
+    
+    @Column({ type: "timestamp" })
+    time: number;
 
     @GeometricColumn()
     path: Coordinates[];

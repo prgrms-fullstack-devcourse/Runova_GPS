@@ -1,5 +1,5 @@
 export * from "./course.dto";
+export * from "./course.preview";
+export * from "./course.edge";
 export * from "./progress.dto";
-export * from "./segment";
-export * from "./get.segments.result";
 export * from "./get.courses.dto";

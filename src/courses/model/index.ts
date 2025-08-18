@@ -1,2 +1,2 @@
 export * from "./course.model";
-export * from "./course.preview";
+export * from "./course.instruction.model";
