@@ -13,8 +13,8 @@ export class Course extends ModelBase {
     @Column({ type: "float8"  })
     length: number;
     
-    @Column({ type: "timestamp" })
-    time: number;
+    @Column({ name: "time_required", type: "varchar" })
+    timeRequired: string;
 
     @GeometricColumn()
     path: Coordinates[];

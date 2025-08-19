@@ -1,8 +1,8 @@
 import { Query } from "@nestjs/cqrs";
-import { GetProgressQueryResult } from "./get.progress.query.result";
+import { InterpolateLocationQueryResult } from "./interpolate.location.query.result";
 import { Coordinates } from "../../common/geo";
 
-export class GetProgressQuery extends Query<GetProgressQueryResult> {
+export class InterpolateLocationQuery extends Query<InterpolateLocationQueryResult> {
     constructor(
         public readonly courseId: number,
         public readonly location: Coordinates,

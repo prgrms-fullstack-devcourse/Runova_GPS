@@ -11,7 +11,7 @@ export class CourseDTO {
     length: number;
 
     @ApiProperty({ type: "string", pattern: "hh:mm:ss", description: "예상 소요 시간" })
-    estimatedTime: string;
+    timeRequired: string;
     
     @Type(() => Coordinates)
     @ApiProperty({ type: Coordinates })

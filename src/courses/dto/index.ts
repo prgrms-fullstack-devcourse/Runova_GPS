@@ -1,5 +1,5 @@
 export * from "./course.dto";
-export * from "./course.preview";
+export * from "./simplify.path.result";
 export * from "./course.node";
 export * from "./course.instruction.dto";
 export * from "./get.courses.dto";

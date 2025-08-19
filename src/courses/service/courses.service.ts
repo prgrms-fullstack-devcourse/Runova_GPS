@@ -3,33 +3,52 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Course } from "../model";
 import { In, Repository } from "typeorm";
 import { CourseDTO, GetCoursesDTO } from "../dto";
-import { pick } from "../../utils/object";
 import { Coordinates } from "../../common/geo";
-import { DateTimeFormatter, nativeJs } from "@js-joda/core";
 import { Transactional } from "typeorm-transactional";
-import { CoursePreviewService } from "./course.preview.service";
-import { CourseInstructionsService } from "./course.instructions.service";
+import { SimplifyPathService } from "./simplify.path.service";
+import { EventBus } from "@nestjs/cqrs";
+import { EstimateTimeService } from "./estimate.time.service";
+import { omit } from "../../utils/object";
+import { CourseCreatedEvent } from "../event";
+
 
 @Injectable()
 export class CoursesService {
-    private readonly _formatter: DateTimeFormatter
-        = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     constructor(
         @InjectRepository(Course)
         private readonly _coursesRepo: Repository<Course>,
-        @Inject(CoursePreviewService)
-        private readonly _previewService: CoursePreviewService,
-        @Inject(CourseInstructionsService)
-        private readonly _instructionsService: CourseInstructionsService,
+        @Inject(SimplifyPathService)
+        private readonly _simplifyPathService: SimplifyPathService,
+        @Inject(EstimateTimeService)
+        private readonly _estimateTimeService: EstimateTimeService,
+        @Inject(EventBus)
+        private readonly _eventBus: EventBus,
     ) {}
 
     @Transactional()
     async createCourse(userId: number, path: Coordinates[]): Promise<CourseDTO> {
-        const preview = await this._previewService.makePreview(path);
-        const course: Course = await this._coursesRepo.save({ userId, ...preview });
-        await this._instructionsService.createCourseInstructions(course.id);
-        return this.toCourseDTO(course);
+        const { path: wkt, length } = await this._simplifyPathService.simplify(path);
+        const timeRequired = this._estimateTimeService.estimateTime(length);
+
+        const { generatedMaps } = await this._coursesRepo
+            .createQueryBuilder()
+            .insert()
+            .into(Course)
+            .values({
+                userId, length, timeRequired,
+                path: () => wkt,
+            })
+            .updateEntity(false)
+            .returning("id")
+            .execute();
+
+       const course = await this._coursesRepo.findOneByOrFail({
+           id: generatedMaps[0].id
+       });
+
+       this._eventBus.publish(new CourseCreatedEvent(course.id, course.path));
+       return __toDTO(course);
     }
 
     async getCourses(dto: GetCoursesDTO): Promise<CourseDTO[]> {
@@ -40,7 +59,7 @@ export class CoursesService {
             userId,
         });
 
-        return courses.map(c => this.toCourseDTO(c));
+        return courses.map(__toDTO);
     }
 
     @Transactional()
@@ -48,15 +67,8 @@ export class CoursesService {
         await this._coursesRepo.delete({ id, userId, });
     }
 
-    private toCourseDTO(course: Course): CourseDTO {
+}
 
-        const estimatedTime = nativeJs(course.time)
-            .toLocalTime().format(this._formatter);
-
-        return {
-            estimatedTime,
-            ...pick(course, ["id", "length", "path"]),
-        };
-    }
-
+function __toDTO(course: Course): CourseDTO {
+    return omit(course, ["userId", "createdAt", "updatedAt"]);
 }
