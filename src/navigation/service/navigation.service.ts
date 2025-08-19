@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 
 @Injectable()
-export class GetProgressService {
+export class NavigationService {
+    constructor(
 
+    ) {}
 }

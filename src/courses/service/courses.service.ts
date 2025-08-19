@@ -3,9 +3,14 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Course } from "../model";
 import { In, Repository } from "typeorm";
 import { CourseDTO, GetCoursesDTO } from "../dto";
-import { pick } from "../../utils/object";
-import { EstimateTimeService } from "./estimate.time.service";
 import { Coordinates } from "../../common/geo";
+import { Transactional } from "typeorm-transactional";
+import { SimplifyPathService } from "./simplify.path.service";
+import { EventBus } from "@nestjs/cqrs";
+import { EstimateTimeService } from "./estimate.time.service";
+import { omit } from "../../utils/object";
+import { CourseCreatedEvent } from "../event";
+
 
 @Injectable()
 export class CoursesService {
@@ -13,14 +18,37 @@ export class CoursesService {
     constructor(
         @InjectRepository(Course)
         private readonly _coursesRepo: Repository<Course>,
+        @Inject(SimplifyPathService)
+        private readonly _simplifyPathService: SimplifyPathService,
         @Inject(EstimateTimeService)
         private readonly _estimateTimeService: EstimateTimeService,
+        @Inject(EventBus)
+        private readonly _eventBus: EventBus,
     ) {}
 
+    @Transactional()
     async createCourse(userId: number, path: Coordinates[]): Promise<CourseDTO> {
-        return await this._coursesRepo.save({ userId, path })
-            .then((c: Course) => this.toCourseDTO(c))
-            .catch(err => { throw err; });
+        const { path: wkt, length } = await this._simplifyPathService.simplify(path);
+        const timeRequired = this._estimateTimeService.estimateTime(length);
+
+        const { generatedMaps } = await this._coursesRepo
+            .createQueryBuilder()
+            .insert()
+            .into(Course)
+            .values({
+                userId, length, timeRequired,
+                path: () => wkt,
+            })
+            .updateEntity(false)
+            .returning("id")
+            .execute();
+
+       const course = await this._coursesRepo.findOneByOrFail({
+           id: generatedMaps[0].id
+       });
+
+       this._eventBus.publish(new CourseCreatedEvent(course.id, course.path));
+       return __toDTO(course);
     }
 
     async getCourses(dto: GetCoursesDTO): Promise<CourseDTO[]> {
@@ -31,20 +59,16 @@ export class CoursesService {
             userId,
         });
 
-        return courses.map(c => this.toCourseDTO(c));
+        return courses.map(__toDTO);
     }
 
+    @Transactional()
     async deleteCourse(id: number, userId: number): Promise<void> {
         await this._coursesRepo.delete({ id, userId, });
     }
 
-    private toCourseDTO(course: Course): CourseDTO {
-        const estimatedTime = this._estimateTimeService.estimateTime(course.id);
+}
 
-        return {
-            estimatedTime,
-            ...pick(course, ["id", "length", "path"]),
-        };
-    }
-
+function __toDTO(course: Course): CourseDTO {
+    return omit(course, ["userId", "createdAt", "updatedAt"]);
 }

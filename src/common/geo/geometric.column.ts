@@ -1,19 +1,6 @@
-import { Column, ColumnOptions, ValueTransformer } from "typeorm";
-import { LineString } from "geojson";
-import { Coordinates } from "./coordinates";
+import { Column, ColumnOptions } from "typeorm";
+import { fromLineString, toLineString } from "./transformer";
 
-const __transformer: ValueTransformer = {
-    from(line: LineString): Coordinates[] {
-        return line.coordinates
-            .map(([lon, lat]) =>
-                new Coordinates({ lon, lat }),
-            );
-    },
-    to(path: Coordinates[]): LineString {
-        const coordinates = path.map(p => [p.lon, p.lat]);
-        return { type: "LineString", coordinates };
-    }
-}
 
 export type GeometricColumnOptions
     = Omit<ColumnOptions, "type" | "spatialFeatureType" | "srid" | "transformer">;
@@ -23,9 +10,12 @@ export function GeometricColumn(options?: GeometricColumnOptions): PropertyDecor
     const opts: ColumnOptions = {
         type: "geometry",
         spatialFeatureType: "LineString",
-        precision: 12,
+        precision: 6,
         srid: 4326,
-        transformer: __transformer
+        transformer: {
+            from: fromLineString,
+            to: toLineString
+        },
     };
 
     options && Object.assign(opts, options);

@@ -1,9 +1,11 @@
-import { Inject } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import { Inject, Injectable } from "@nestjs/common";
 import { DateTimeFormatter, nativeJs } from "@js-joda/core";
+import { ConfigService } from "@nestjs/config";
 
+
+@Injectable()
 export class EstimateTimeService {
-    private readonly _meanSpeed: number;
+    private readonly _pace: number;
 
     private readonly _formatter: DateTimeFormatter
         = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -12,14 +14,13 @@ export class EstimateTimeService {
         @Inject(ConfigService)
         config: ConfigService,
     ) {
-        this._meanSpeed = config.get<number>(
-            "RUNNER_MEAN_SPEED"
-        ) ?? 8;
+        this._pace = config.get<number>(
+            "RUNNER_MEAN_PACE"
+        ) ?? 1.7;
     }
 
     estimateTime(length: number): string {
-        const ms = (length / this._meanSpeed) * 3.6 * Math.pow(10, 6);
-        const t = nativeJs(new Date(ms)).toLocalTime();
-        return t.format(this._formatter);
+        const ms = Math.round((length / this._pace) * 1000);
+        return nativeJs(new Date(ms)).format(this._formatter);
     }
 }
