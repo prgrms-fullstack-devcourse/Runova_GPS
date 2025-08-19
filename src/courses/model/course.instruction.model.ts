@@ -7,7 +7,7 @@ export class CourseInstruction extends ModelBase {
     id: string;
 
     @Column({ name: "course_id", type: "integer" })
-    course_id: number;
+    courseId: number;
 
     @Column({ type: "varchar" })
     geo: string;

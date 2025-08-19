@@ -8,6 +8,7 @@ import { Coordinates } from "../../common/geo";
 import { DateTimeFormatter, nativeJs } from "@js-joda/core";
 import { Transactional } from "typeorm-transactional";
 import { CoursePreviewService } from "./course.preview.service";
+import { CourseInstructionsService } from "./course.instructions.service";
 
 @Injectable()
 export class CoursesService {
@@ -19,12 +20,15 @@ export class CoursesService {
         private readonly _coursesRepo: Repository<Course>,
         @Inject(CoursePreviewService)
         private readonly _previewService: CoursePreviewService,
+        @Inject(CourseInstructionsService)
+        private readonly _instructionsService: CourseInstructionsService,
     ) {}
 
     @Transactional()
     async createCourse(userId: number, path: Coordinates[]): Promise<CourseDTO> {
         const preview = await this._previewService.makePreview(path);
         const course: Course = await this._coursesRepo.save({ userId, ...preview });
+        await this._instructionsService.createCourseInstructions(course.id);
         return this.toCourseDTO(course);
     }
 
